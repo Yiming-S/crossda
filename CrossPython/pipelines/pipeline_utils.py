@@ -136,8 +136,18 @@ def extract_features_train(
         return csp.fit_transform(X, y), {"type": "CSP", "csp": csp}
 
     if feat_name == "TS":
+        # Tangent-space parametrization of covariance matrices.
+        # metric="riemann" uses the geometric (Frechet) mean as reference —
+        #   better theoretical grounding but expensive (iterative logm/expm).
+        # metric="euclid" uses the arithmetic mean — nearly identical accuracy
+        #   but significantly faster on high-dimensional data (e.g. 3x on 60ch).
+        # See: Dadi et al. (2019) "Benchmarking functional connectome-based
+        #   predictive models for resting-state fMRI", NeuroImage 192, Fig.A10
+        #   & Appendix A. Default changed to "euclid" based on our own benchmark
+        #   (TS_test/): 3x speedup with comparable or better accuracy when
+        #   combined with domain adaptation (SA).
         cov_est = Covariances(estimator="lwf")
-        ts = TangentSpace(metric=feat_params.get("ts_metric", "riemann"))
+        ts = TangentSpace(metric=feat_params.get("ts_metric", "euclid"))
         covs = cov_est.fit_transform(X)
         return ts.fit_transform(covs, y), {"type": "TS", "cov_est": cov_est, "ts": ts}
 
