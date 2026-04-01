@@ -58,6 +58,7 @@ def generate_method_bank(
     if mode == "smoke":
         rows = [
             dict(pipeline="MAP", feature="CSP", classifier="lda", da="sa", dist_type=None),
+            dict(pipeline="DWP", feature="CSP", classifier="lda", da="sa", dist_type=None),
             dict(pipeline="MMP_merge_then_adapt", feature="CSP", classifier="lda", da="sa", dist_type="mmd"),
             dict(pipeline="MMP_moe", feature="CSP", classifier="lda", da="sa", dist_type="mmd"),
             dict(pipeline="BDP", feature="CSP", classifier="lda", da="sa", dist_type="mmd"),
@@ -70,19 +71,19 @@ def generate_method_bank(
         mini_features = ["CSP", "logvar"]
         mini_da = ["none", "sa", "pt", "coral"]
         mini_clf = ["lda", "svm_linear"]
-        all_pips = ["MAP"] + mmp_variants + bdp_variants
+        all_pips = ["MAP", "DWP"] + mmp_variants + bdp_variants
         combos = list(itertools.product(all_pips, mini_features, mini_clf, mini_da))
         mb = pd.DataFrame(combos, columns=["pipeline", "feature", "classifier", "da"])
         mb["dist_type"] = mb["pipeline"].apply(
-            lambda p: None if p == "MAP" else dist_types[0]
+            lambda p: None if p in ("MAP", "DWP") else dist_types[0]
         )
 
     elif mode == "fair":
-        all_pips = ["MAP"] + mmp_variants + bdp_variants
+        all_pips = ["MAP", "DWP"] + mmp_variants + bdp_variants
         combos = list(itertools.product(all_pips, features, classifiers, da_methods))
         mb = pd.DataFrame(combos, columns=["pipeline", "feature", "classifier", "da"])
         mb["dist_type"] = mb["pipeline"].apply(
-            lambda p: None if p == "MAP" else dist_types[0]
+            lambda p: None if p in ("MAP", "DWP") else dist_types[0]
         )
 
     else:  # practical
@@ -95,9 +96,9 @@ def generate_method_bank(
             geom_combos,
             columns=["pipeline", "feature", "classifier", "da", "dist_type"],
         )
-        # MAP: no dist_type
+        # MAP and DWP: no dist_type
         map_combos = list(itertools.product(
-            ["MAP"], features, classifiers, da_methods
+            ["MAP", "DWP"], features, classifiers, da_methods
         ))
         grid_map = pd.DataFrame(
             map_combos, columns=["pipeline", "feature", "classifier", "da"]

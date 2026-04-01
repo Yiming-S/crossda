@@ -33,10 +33,12 @@ datasets:
 # MAP                  : Merge & Adapt (supervised grid search)
 # MMP_merge_then_adapt : Minimum-distance multi-source, weighted merge combiner
 # MMP_moe              : Minimum-distance multi-source, mixture-of-experts combiner
+# DWP                  : Distance-Weighted Pooling (soft-weighted full pool)
 # BDP                  : Bridge-Domain proxy tuning (far → bridge)
 # BDP_bridge_to_far    : Bridge-Domain proxy tuning (bridge → far)
 pipelines:
   - MAP
+  - DWP
   - MMP_merge_then_adapt
   - MMP_moe
   - BDP

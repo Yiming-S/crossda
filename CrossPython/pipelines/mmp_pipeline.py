@@ -401,7 +401,7 @@ def _run_combiner(X_sel, Y_sel, w_sel, X_tar, Y_tar, da_name, da_ctl, clf, combi
     return _combiner_moe(X_sel, Y_sel, w_sel, X_tar, Y_tar, da_name, da_ctl, clf, has_label)
 
 
-def _merge_weighted(X_list, y_list, weights, scale=200):
+def _merge_weighted(X_list, y_list, weights, scale=50):
     mult = np.maximum(1, np.round(weights * scale).astype(int))
     X_parts, y_parts = [], []
     for X, y, m in zip(X_list, y_list, mult):

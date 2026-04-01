@@ -243,7 +243,8 @@ def _process_subject_loaded(
     from ..pipelines.map_pipeline import MAP as map_fn
     from ..pipelines.bdp_pipeline import BDP as bdp_fn
     from ..pipelines.mmp_pipeline import MMP as mmp_fn
-    pipeline_fn_map = {"MAP": map_fn, "BDP": bdp_fn, "MMP": mmp_fn}
+    from ..pipelines.dwp_pipeline import DWP as dwp_fn
+    pipeline_fn_map = {"MAP": map_fn, "BDP": bdp_fn, "MMP": mmp_fn, "DWP": dwp_fn}
 
     results_list = {}
 
@@ -320,6 +321,12 @@ def _process_subject_loaded(
                     call_args.update(score=map_score, k_sess=map_k_sess, n_repeats=map_n_repeats,
                                      shuffle_sessions=map_shuffle_sessions, seed=map_seed,
                                      nfolds_out=nfolds_out)
+                elif pipe_spec["family"] == "DWP":
+                    call_args.update(score=map_score, k_sess=map_k_sess, n_repeats=map_n_repeats,
+                                     shuffle_sessions=map_shuffle_sessions, seed=map_seed,
+                                     nfolds_out=nfolds_out)
+                    call_args["dist_type"] = default_dist_type
+                    call_args["seed"] = fold_seed
                 elif pipe_spec["family"] == "BDP":
                     call_args["dist_type"] = row.get("dist_type") or default_dist_type
                     call_args["seed"] = fold_seed
@@ -362,6 +369,7 @@ def _process_subject_loaded(
                         "train_labels": [data[j].get("label") for j in train_idx],
                         "y_pred": res.get("y_pred"),
                         "y_true": res.get("y_true"),
+                        "acc_map_base": res.get("acc_map_base", np.nan),
                         "session_roles": raw_roles,
                     })
                 except Exception as e:
@@ -372,7 +380,7 @@ def _process_subject_loaded(
             mb.at[m, "baseline"] = float(np.nanmean(base_vec)) if np.any(np.isfinite(base_vec)) else np.nan
             mb.at[m, "n_valid_pairs"] = int(np.sum(np.isfinite(acc_vec)))
             mb.at[m, "error"] = "; ".join(error_msgs) if error_msgs else None
-            mb.at[m, "score"] = {"MAP": "kfold", "MMP": "anchor_one_shot", "BDP": "bridge_proxy"}.get(pipe_spec["family"])
+            mb.at[m, "score"] = {"MAP": "kfold", "DWP": "kfold", "MMP": "anchor_one_shot", "BDP": "bridge_proxy"}.get(pipe_spec["family"])
             mb.at[m, "outer_eval"] = outer_eval_label
             _save_checkpoint(ckpt_file, mb, detail_records, m)
 

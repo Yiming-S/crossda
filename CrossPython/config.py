@@ -26,7 +26,7 @@ import yaml
 
 # ── Valid values ────────────────────────────────────────────────────────────
 VALID_PIPELINES = (
-    "MAP",
+    "MAP", "DWP",
     "MMP_merge_then_adapt", "MMP_moe",
     "BDP", "BDP_bridge_to_far",
 )
@@ -52,11 +52,12 @@ class Config:
     # MAP                  : Merge & Adapt (supervised grid search)
     # MMP_merge_then_adapt : Minimum-distance multi-source, weighted merge
     # MMP_moe              : Minimum-distance multi-source, mixture-of-experts
+    # DWP                  : Distance-Weighted Pooling (soft-weighted full pool)
     # BDP                  : Bridge-Domain proxy tuning (far → bridge)
     # BDP_bridge_to_far    : Bridge-Domain proxy tuning (bridge → far)
     pipelines: List[str] = field(
         default_factory=lambda: [
-            "MAP", "MMP_merge_then_adapt", "MMP_moe",
+            "MAP", "DWP", "MMP_merge_then_adapt", "MMP_moe",
             "BDP", "BDP_bridge_to_far",
         ]
     )
@@ -126,6 +127,8 @@ class Config:
 
 _PIPELINE_ALIASES = {
     "MAP": "MAP",
+    "DWP": "DWP",
+    "WMAP": "DWP",
     "BDP": "BDP",
     "BDP_BRIDGE_TO_FAR": "BDP_bridge_to_far",
     "BDP_BF": "BDP_bridge_to_far",
@@ -150,6 +153,7 @@ def normalize_pipeline_labels(pipelines: List[str]) -> List[str]:
 
 _PIPELINE_SPECS = {
     "MAP":                  {"label": "MAP",                  "family": "MAP", "combiner": None},
+    "DWP":                  {"label": "DWP",                  "family": "DWP", "combiner": None},
     "MMP_merge_then_adapt": {"label": "MMP_merge_then_adapt", "family": "MMP", "combiner": "merge_then_adapt"},
     "MMP_moe":              {"label": "MMP_moe",              "family": "MMP", "combiner": "moe"},
     "BDP":                  {"label": "BDP",                  "family": "BDP", "combiner": None, "proxy_direction": "far_to_bridge"},
