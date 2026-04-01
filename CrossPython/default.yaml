@@ -25,9 +25,9 @@ result_dir: "/home/yiming/Desktop/WORK/result"
 # stieger2021  : Stieger2021, 62 subjects, 6-11 sessions each
 # ma2020       : Ma2020, 25 subjects, 15 sessions each (right hand vs right elbow)
 datasets:
-  # - bnci004
-  # - stieger2021
-   - ma2020
+  - bnci004
+  - stieger2021
+  - ma2020
 
 # ── Pipelines ────────────────────────────────────────────────────────────────
 # MAP                  : Merge & Adapt (supervised grid search)
