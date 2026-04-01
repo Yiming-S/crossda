@@ -137,7 +137,7 @@ def extract_features_train(
 
     if feat_name == "TS":
         cov_est = Covariances(estimator="lwf")
-        ts = TangentSpace()
+        ts = TangentSpace(metric=feat_params.get("ts_metric", "riemann"))
         covs = cov_est.fit_transform(X)
         return ts.fit_transform(covs, y), {"type": "TS", "cov_est": cov_est, "ts": ts}
 
