@@ -73,7 +73,7 @@ map_seed: 1
 mmp_B_boot: 10           # bootstrap replicates for distance CI (use 200 for production)
 
 # ── Execution ────────────────────────────────────────────────────────────────
-n_cores: 12              # subject-level parallelism (1 = sequential)
+n_cores: 15              # subject-level parallelism (1 = sequential)
 resume: true             # skip subjects with existing results
 epsilon: 1.0e-6
 seed: 2025

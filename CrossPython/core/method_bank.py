@@ -68,7 +68,7 @@ def generate_method_bank(
 
     elif mode == "mini":
         # Focused pipeline comparison: 2 features × 4 DA × 2 classifiers = 16/pipeline
-        mini_features = ["CSP", "logvar"]
+        mini_features = ["CSP", "logvar", "TS"]
         mini_da = ["none", "sa", "pt", "coral"]
         mini_clf = ["lda", "svm_linear"]
         all_pips = ["MAP", "DWP"] + mmp_variants + bdp_variants
