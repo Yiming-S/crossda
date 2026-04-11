@@ -31,7 +31,7 @@ VALID_PIPELINES = (
     "BDP", "BDP_bridge_to_far",
 )
 VALID_DATASETS = ("bnci004", "stieger2021", "ma2020")
-VALID_MODES = ("smoke", "mini", "fair", "practical")
+VALID_MODES = ("smoke", "mini", "svm_radial_add", "fair", "practical")
 VALID_DIST_POLICIES = ("fixed_mmd", "multi")
 VALID_MAP_SCORES = ("kfold", "loso", "pairwise")
 
@@ -89,6 +89,12 @@ class Config:
 
     # -- MMP settings --
     mmp_B_boot: int = 10            # bootstrap replicates for distance CI
+
+    # -- DWP settings --
+    # DWP discards the phase-2 distance CI (only uses `est`), so bootstrap
+    # smoothing is rarely worth its ~200x cost. Defaults turn it off.
+    dwp_dist_bootstrap_B: int = 1
+    dwp_dist_est_method: str = "direct"
 
     # -- Execution --
     n_cores: int = 5               # subject-level parallelism (1 = sequential)

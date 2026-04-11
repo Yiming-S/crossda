@@ -24,11 +24,13 @@ def generate_method_bank(
 
     Parameters
     ----------
-    mode : {"smoke", "mini", "fair", "practical"}
-        smoke     – 1 config per pipeline (sanity test)
-        mini      – focused comparison: 2 features × 4 DA × 2 classifiers (16/pipeline)
-        fair      – full balanced space across pipelines
-        practical – larger space with pipeline-specific pruning
+    mode : {"smoke", "mini", "svm_radial_add", "fair", "practical"}
+        smoke          – 1 config per pipeline (sanity test)
+        mini           – focused comparison: 3 features × 4 DA × 2 classifiers
+        svm_radial_add – same grid as mini, but classifier fixed to svm_radial
+                         (for supplementing mini runs that only used svm_linear/lda)
+        fair           – full balanced space across pipelines
+        practical      – larger space with pipeline-specific pruning
     dist_policy : {"fixed_mmd", "multi"}
         fixed_mmd – single MMD distance
         multi     – MMD + Mahalanobis
@@ -78,6 +80,20 @@ def generate_method_bank(
             lambda p: None if p in ("MAP", "DWP") else dist_types[0]
         )
 
+    elif mode == "svm_radial_add":
+        # Supplement run: identical grid to `mini` but with svm_radial only.
+        # Intended to extend an existing `mini` result set (lda + svm_linear)
+        # with an RBF-SVM counterpart for sensitivity analysis.
+        mini_features = ["CSP", "logvar", "TS"]
+        mini_da = ["none", "sa", "pt", "coral"]
+        mini_clf = ["svm_radial"]
+        all_pips = ["MAP", "DWP"] + mmp_variants + bdp_variants
+        combos = list(itertools.product(all_pips, mini_features, mini_clf, mini_da))
+        mb = pd.DataFrame(combos, columns=["pipeline", "feature", "classifier", "da"])
+        mb["dist_type"] = mb["pipeline"].apply(
+            lambda p: None if p in ("MAP", "DWP") else dist_types[0]
+        )
+
     elif mode == "fair":
         all_pips = ["MAP", "DWP"] + mmp_variants + bdp_variants
         combos = list(itertools.product(all_pips, features, classifiers, da_methods))
@@ -108,7 +124,7 @@ def generate_method_bank(
 
     # ── Pruning ──────────────────────────────────────────────────────────
 
-    if mode not in ("smoke", "mini"):
+    if mode not in ("smoke", "mini", "svm_radial_add"):
         mb = _prune_common(mb)
         if mode == "practical":
             mb = _prune_pipeline_specific(mb)
@@ -120,6 +136,7 @@ def generate_method_bank(
     mb["prune_tag"] = {
         "smoke": "none",
         "mini": "none",
+        "svm_radial_add": "none",
         "fair": "common",
         "practical": "common+pipeline_specific",
     }[mode]

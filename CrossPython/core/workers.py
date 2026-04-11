@@ -232,6 +232,7 @@ def _process_subject_loaded(
     map_score="kfold", map_k_sess=2, map_n_repeats=1,
     map_shuffle_sessions=True, map_seed=1,
     epsilon=1e-6, default_dist_type="mmd", mmp_B_boot=10,
+    dwp_dist_bootstrap_B=1, dwp_dist_est_method="direct",
     resume=True, verbose=True, seed=None,
     **_ignored,
 ):
@@ -327,10 +328,21 @@ def _process_subject_loaded(
                                      nfolds_out=nfolds_out)
                     call_args["dist_type"] = default_dist_type
                     call_args["seed"] = fold_seed
+                    call_args["dist_bootstrap_B"] = dwp_dist_bootstrap_B
+                    call_args["dist_est_method"] = dwp_dist_est_method
                 elif pipe_spec["family"] == "BDP":
                     call_args["dist_type"] = row.get("dist_type") or default_dist_type
                     call_args["seed"] = fold_seed
                     call_args["proxy_direction"] = pipe_spec.get("proxy_direction", "far_to_bridge")
+                    # Forward MAP-style params (used only when BDP degrades).
+                    # BDP reuses `seed` (fold_seed) for the degrade scorer.
+                    call_args.update(
+                        map_score=map_score,
+                        map_k_sess=map_k_sess,
+                        map_n_repeats=map_n_repeats,
+                        map_shuffle_sessions=map_shuffle_sessions,
+                        nfolds_out=nfolds_out,
+                    )
                 elif pipe_spec["family"] == "MMP":
                     call_args["dist_type"] = row.get("dist_type") or default_dist_type
                     call_args["B_boot"] = mmp_B_boot
@@ -380,7 +392,21 @@ def _process_subject_loaded(
             mb.at[m, "baseline"] = float(np.nanmean(base_vec)) if np.any(np.isfinite(base_vec)) else np.nan
             mb.at[m, "n_valid_pairs"] = int(np.sum(np.isfinite(acc_vec)))
             mb.at[m, "error"] = "; ".join(error_msgs) if error_msgs else None
-            mb.at[m, "score"] = {"MAP": "kfold", "DWP": "kfold", "MMP": "anchor_one_shot", "BDP": "bridge_proxy"}.get(pipe_spec["family"])
+            default_score = {
+                "MAP": "kfold", "DWP": "kfold",
+                "MMP": "anchor_one_shot", "BDP": "bridge_proxy",
+            }.get(pipe_spec["family"])
+            row_modes = {
+                (d.get("detail") or {}).get("score_mode")
+                for d in detail_records if d.get("method_row") == m
+            }
+            row_modes.discard(None)
+            if not row_modes:
+                mb.at[m, "score"] = default_score
+            elif len(row_modes) == 1:
+                mb.at[m, "score"] = row_modes.pop()
+            else:
+                mb.at[m, "score"] = "mixed:" + "|".join(sorted(row_modes))
             mb.at[m, "outer_eval"] = outer_eval_label
             _save_checkpoint(ckpt_file, mb, detail_records, m)
 

@@ -97,7 +97,10 @@ def run(cfg: Config):
             map_score=cfg.map_score, map_k_sess=cfg.map_k_sess,
             map_n_repeats=cfg.map_n_repeats, map_shuffle_sessions=cfg.map_shuffle_sessions,
             map_seed=cfg.map_seed, epsilon=cfg.epsilon, default_dist_type="mmd",
-            mmp_B_boot=cfg.mmp_B_boot, resume=cfg.resume, seed=cfg.seed, verbose=True,
+            mmp_B_boot=cfg.mmp_B_boot,
+            dwp_dist_bootstrap_B=cfg.dwp_dist_bootstrap_B,
+            dwp_dist_est_method=cfg.dwp_dist_est_method,
+            resume=cfg.resume, seed=cfg.seed, verbose=True,
         )
 
         np.random.seed(cfg.seed)
@@ -155,7 +158,7 @@ def main():
     parser.add_argument("--result-dir", type=str, default=None)
     parser.add_argument("--datasets", nargs="+", default=None)
     parser.add_argument("--pipelines", nargs="+", default=None)
-    parser.add_argument("--mode", choices=["smoke", "mini", "fair", "practical"], default=None)
+    parser.add_argument("--mode", choices=["smoke", "mini", "svm_radial_add", "fair", "practical"], default=None)
     parser.add_argument("--n-cores", type=int, default=None)
     args = parser.parse_args()
 

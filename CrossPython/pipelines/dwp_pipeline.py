@@ -60,6 +60,12 @@ def DWP(
     scale_for_distance: bool = True,
     weight_power: float = 1.0,
     merge_scale: int = 50,
+    # Bootstrap for phase-2 distance estimation.
+    # Default off (B=1 + direct): deterministic single-shot distance, ~200x
+    # faster than B=200/boot_mean. DWP only uses `est` (not CI), so bootstrap
+    # smoothing is usually not worth its cost; set explicitly if needed.
+    dist_bootstrap_B: int = 1,
+    dist_est_method: str = "direct",
     verbose: bool = False,
     **_ignored,
 ) -> Dict[str, Any]:
@@ -168,7 +174,7 @@ def DWP(
     dist_info = [
         {"i": i, **distance_ci(
             xs, t_pre, dist_type, dist_param,
-            B=200, alpha=0.05, est_method="boot_mean",
+            B=dist_bootstrap_B, alpha=0.05, est_method=dist_est_method,
             rng=np.random.default_rng(dist_seed + i) if dist_seed is not None else None,
         )}
         for i, xs in enumerate(x_pre)
@@ -302,6 +308,8 @@ def DWP(
         "score_mode": best_setup["scoreMode"],
         "weight_power": weight_power,
         "merge_scale": merge_scale,
+        "dist_bootstrap_B": dist_bootstrap_B,
+        "dist_est_method": dist_est_method,
         "distance_fallback": distance_fallback,
         "exact_map_bypass": exact_map_bypass,
         "weights": weights.tolist(),
