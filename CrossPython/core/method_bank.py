@@ -72,7 +72,7 @@ def generate_method_bank(
         # Focused pipeline comparison: 2 features × 4 DA × 2 classifiers = 16/pipeline
         mini_features = ["CSP", "logvar", "TS"]
         mini_da = ["none", "sa", "pt", "coral"]
-        mini_clf = ["lda", "svm_linear"]
+        mini_clf = ["lda", "svm_radial"]
         all_pips = ["MAP", "DWP"] + mmp_variants + bdp_variants
         combos = list(itertools.product(all_pips, mini_features, mini_clf, mini_da))
         mb = pd.DataFrame(combos, columns=["pipeline", "feature", "classifier", "da"])

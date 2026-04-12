@@ -25,9 +25,9 @@ result_dir: "/Users/yiming/Documents/WORK/results"
 # stieger2021  : Stieger2021, 62 subjects, 6-11 sessions each
 # ma2020       : Ma2020, 25 subjects, 15 sessions each (right hand vs right elbow)
 datasets:
-#  - bnci004
-#  - stieger2021
-  - ma2020
+  - bnci004
+  - stieger2021
+#  - ma2020
 
 # ── Pipelines ────────────────────────────────────────────────────────────────
 # MAP                  : Merge & Adapt (supervised grid search)
@@ -73,7 +73,7 @@ map_seed: 1
 mmp_B_boot: 10           # bootstrap replicates for distance CI (use 200 for production)
 
 # ── Execution ────────────────────────────────────────────────────────────────
-n_cores: 5              # subject-level parallelism (1 = sequential)
+n_cores: 10             # subject-level parallelism (1 = sequential)
 resume: true             # skip subjects with existing results
 epsilon: 1.0e-6
 seed: 2025
