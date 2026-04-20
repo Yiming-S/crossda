@@ -394,7 +394,7 @@ def _process_subject_loaded(
             mb.at[m, "error"] = "; ".join(error_msgs) if error_msgs else None
             default_score = {
                 "MAP": "kfold", "DWP": "kfold",
-                "MMP": "anchor_one_shot", "BDP": "bridge_proxy",
+                "MMP": "near_nearest_proxy", "BDP": "bridge_proxy",
             }.get(pipe_spec["family"])
             row_modes = {
                 (d.get("detail") or {}).get("score_mode")

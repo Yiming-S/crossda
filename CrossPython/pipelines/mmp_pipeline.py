@@ -4,7 +4,9 @@ MMP Pipeline — Minimum-distance Multi-source Pipeline
   1) Distance-to-target with bootstrap CI; CI-aware source gating
   2) Optional CORAL harmonization to medoid
   3) Two combiners: merge_then_adapt / moe (weighted voting)
-  4) Anchor one-shot tuning (no target labels)
+  4) Near/nearest proxy tuning within the target-defined near set
+     - if |N(t)| >= 2: use N(t) without s* -> s*
+     - if |N(t)| = 1: use second-nearest-to-t -> s*
 """
 
 from __future__ import annotations
@@ -43,7 +45,7 @@ def MMP(
     scale_for_distance: bool = True,
     ci_alpha: float = 0.05,
     B_boot: int = 10,
-    k_candidates: int = 2,
+    k_candidates: int = 2,  # deprecated: retained for compatibility, no longer used to cap N(t)
     p_weight: float = 1.0,
     w_max: float = 1.0,
     harmonize: str = "coral",
@@ -84,41 +86,33 @@ def MMP(
     main_rng = np.random.default_rng(seed) if seed is not None else None
     gate_main = _select_sources(X_list, X_T, **gate_kw, rng=main_rng)
 
-    # ── Anchor one-shot tuning ───────────────────────────────────────
-    s_star = gate_main["best_i"]
-    pool_idx = [i for i in range(len(train_sessions)) if i != s_star]
-    if not pool_idx:
-        raise RuntimeError("MMP: no source left for anchor tuning.")
-
-    X_pool = [X_list[i] for i in pool_idx]
-    Y_pool = [train_sessions[i]["y"] for i in pool_idx]
-    anchor_rng = np.random.default_rng(seed + 1) if seed is not None else None
-    gate_anchor = _select_sources(X_pool, X_list[s_star], **gate_kw, rng=anchor_rng)
-
-    X_anchor_src = _maybe_harmonize(
-        [X_pool[i] for i in gate_anchor["sel_idx"]], harmonize, dist_type, dist_param,
+    # ── Near/nearest proxy tuning ────────────────────────────────────
+    proxy_source_idx, proxy_target_idx, proxy_mode = _build_proxy_task_from_near_set(gate_main)
+    proxy_weights = _weights_for_indices(
+        gate_main["ci_tbl"], proxy_source_idx, epsilon, p_weight, w_max,
     )
-    Y_anchor_src = [Y_pool[i] for i in gate_anchor["sel_idx"]]
+    X_anchor_src = _maybe_harmonize(
+        [X_list[i] for i in proxy_source_idx], harmonize, dist_type, dist_param,
+    )
+    Y_anchor_src = [train_sessions[i]["y"] for i in proxy_source_idx]
 
     clf_instance = get_classifier(clf_name, clf_params)
     anchor_eval = _run_combiner(
-        X_anchor_src, Y_anchor_src, gate_anchor["weights"],
-        X_list[s_star], train_sessions[s_star]["y"],
+        X_anchor_src, Y_anchor_src, proxy_weights,
+        X_list[proxy_target_idx], train_sessions[proxy_target_idx]["y"],
         da_name, da_control, clf_instance, combiner,
     )
     tune_acc = anchor_eval["acc_DA"] if np.isfinite(anchor_eval["acc_DA"]) else np.nan
 
-    # Remap anchor CI indices
-    ci_anchor = gate_anchor["ci_tbl"]
-    for c in ci_anchor:
-        c["i"] = pool_idx[c["i"]]
     anchor_info = {
-        "target_idx": s_star,
-        "source_idx": [pool_idx[i] for i in gate_anchor["sel_idx"]],
-        "source_best_idx": pool_idx[gate_anchor["best_i"]],
-        "source_weights": gate_anchor["weights"],
-        "ci_table": ci_anchor,
-        "overlap_set": [pool_idx[i] for i in gate_anchor["overlap_idx"]],
+        "target_idx": proxy_target_idx,
+        "source_idx": proxy_source_idx,
+        "source_weights": proxy_weights.tolist(),
+        "selection_mode": proxy_mode,
+        "near_set_idx": list(gate_main["sel_idx"]),
+        "ranked_idx": list(gate_main["ranked_idx"]),
+        "second_nearest_idx": gate_main["ranked_idx"][1] if len(gate_main["ranked_idx"]) >= 2 else None,
+        "ci_table": gate_main["ci_tbl"],
     }
 
     # ── Final evaluation ─────────────────────────────────────────────
@@ -137,7 +131,7 @@ def MMP(
     if verbose:
         logger.info(
             f"[MMP({combiner})] {feat_name}/{clf_name}/{da_name} | "
-            f"sel={gate_main['sel_idx']} | s*={s_star} | tune={tune_acc:.4f} | "
+            f"near={gate_main['sel_idx']} | s*={gate_main['best_i']} | tune={tune_acc:.4f} | "
             f"base={eval_final['baseline']:.4f} | da={eval_final['acc_DA']:.4f}"
         )
 
@@ -148,15 +142,18 @@ def MMP(
         "da": {"method": da_name, "control": da_control},
         "best_idx": gate_main["best_i"], "sel_idx": gate_main["sel_idx"],
         "weights": gate_main["weights"], "ci_table": gate_main["ci_tbl"],
-        "overlap_set": gate_main["overlap_idx"], "anchor": anchor_info,
+        "overlap_set": gate_main["overlap_idx"], "ranked_idx": gate_main["ranked_idx"],
+        "anchor": anchor_info,
         "combiner": combiner, "harmonize": harmonize,
-        "cvMeanAcc": tune_acc, "scoreMode": "anchor_one_shot",
+        "cvMeanAcc": tune_acc, "scoreMode": "near_nearest_proxy",
     }
     detail = {
         "pipeline": f"MMP_{combiner}", "dist_type": dist_type,
-        "score_mode": "anchor_one_shot", "combiner": combiner, "harmonize": harmonize,
+        "score_mode": "near_nearest_proxy", "selection_mode": proxy_mode,
+        "combiner": combiner, "harmonize": harmonize,
         "best_idx": gate_main["best_i"], "selected_idx": gate_main["sel_idx"],
-        "overlap_set": gate_main["overlap_idx"], "weights": gate_main["weights"],
+        "overlap_set": gate_main["overlap_idx"], "ranked_idx": gate_main["ranked_idx"],
+        "weights": gate_main["weights"],
         "ci_table": gate_main["ci_tbl"], "anchor": anchor_info,
     }
 
@@ -165,13 +162,10 @@ def MMP(
     overlap_set = set(gate_main["overlap_idx"])
     ci_map_main = {c["i"]: c for c in gate_main["ci_tbl"]}
 
-    anchor_sel_set = set(anchor_info["source_idx"])
-    anchor_best = anchor_info["source_best_idx"]
-    ci_map_anchor = {c["i"]: c for c in anchor_info["ci_table"]}
-
     t_id = test_ses.get("id")
     t_label = test_ses.get("label", f"sess_{t_id}")
-    s_star_id = train_sessions[s_star].get("id")
+    s_star = gate_main["best_i"]
+    anchor_sel_set = set(anchor_info["source_idx"])
 
     session_roles = []
     for i in range(len(train_sessions)):
@@ -190,16 +184,14 @@ def MMP(
 
         # ---- main stage ----
         if i == s_star:
-            main_role = "s_star"
-        elif i in sel_set:
-            main_role = "selected"
+            main_role = "nearest"
         elif i in overlap_set:
-            main_role = "overlap_only"
+            main_role = "near"
         else:
-            main_role = "dropped"
+            main_role = "far"
 
         sel_idx_list = list(gate_main["sel_idx"])
-        if i in sel_set or i == s_star:
+        if i in sel_set:
             w_pos = sel_idx_list.index(i)
             main_weight = float(gate_main["weights"][w_pos])
         else:
@@ -213,41 +205,29 @@ def MMP(
         })
 
         # ---- anchor stage ----
-        ci_a = ci_map_anchor.get(i, {})
-        dist_anchor = {
-            "dist_to_session": s_star_id,
-            "dist_est_method": "direct",
-            "dist_est": ci_a.get("est"),
-            "dist_lwr": ci_a.get("lwr"),
-            "dist_upr": ci_a.get("upr"),
-        }
-
-        if i == s_star:
+        if i == proxy_target_idx:
             anchor_role = "target"
             a_weight = None
         elif i in anchor_sel_set:
-            if i == anchor_best:
-                anchor_role = "anchor_best"
+            if proxy_mode == "second_nearest_fallback":
+                anchor_role = "second_nearest_fallback_source"
             else:
-                anchor_role = "anchor_source"
+                anchor_role = "proxy_source"
             try:
                 a_pos = list(anchor_info["source_idx"]).index(i)
                 a_weight = float(anchor_info["source_weights"][a_pos])
             except (ValueError, IndexError):
                 a_weight = None
-        elif i in set(pool_idx):
-            anchor_role = "anchor_dropped"
-            a_weight = None
         else:
-            anchor_role = "not_in_pool"
+            anchor_role = "not_used"
             a_weight = None
 
         session_roles.append({
             "stage": "anchor", "local_idx": i,
             "session_abs_idx": sid, "session_label": slabel,
             "role": anchor_role,
-            "is_best": (i == anchor_best and i != s_star),
-            "weight": a_weight, **dist_anchor,
+            "is_best": False,
+            "weight": a_weight, **dist_main,
         })
 
         # ---- final stage (dist to real target repeated) ----
@@ -312,20 +292,39 @@ def _select_sources(
     bl, bu = ok[0]["lwr"], ok[0]["upr"]
 
     overlap_idx = [c["i"] for c in ok if not (c["upr"] < bl or bu < c["lwr"])]
-
-    if len(overlap_idx) <= 1:
-        sel_idx = [best_i]
-    else:
-        k = min(int(k_candidates), len(overlap_idx)) if k_candidates >= 1 else len(overlap_idx)
-        overlap_sorted = sorted([c for c in ok if c["i"] in overlap_idx], key=lambda c: c["est"])
-        sel_idx = [c["i"] for c in overlap_sorted[:k]]
+    ranked_idx = [c["i"] for c in ok]
+    overlap_sorted = sorted([c for c in ok if c["i"] in overlap_idx], key=lambda c: c["est"])
+    sel_idx = [c["i"] for c in overlap_sorted]
 
     est_map = {c["i"]: c["est"] for c in ci_tbl}
     sel_ests = np.array([est_map[i] for i in sel_idx])
     weights = _weight_from_D(sel_ests, epsilon, p_weight, w_max)
 
     return {"sel_idx": sel_idx, "weights": weights, "best_i": best_i,
-            "overlap_idx": overlap_idx, "ci_tbl": ci_tbl}
+            "overlap_idx": overlap_idx, "ranked_idx": ranked_idx, "ci_tbl": ci_tbl}
+
+
+def _build_proxy_task_from_near_set(gate_main: dict) -> tuple[list[int], int, str]:
+    s_star = gate_main["best_i"]
+    near_idx = list(gate_main["sel_idx"])
+    ranked_idx = list(gate_main["ranked_idx"])
+
+    if len(near_idx) >= 2:
+        proxy_source_idx = [i for i in near_idx if i != s_star]
+        proxy_mode = "near_minus_nearest"
+    else:
+        if len(ranked_idx) < 2:
+            raise RuntimeError("MMP: cannot form proxy selection because no second-nearest session exists.")
+        proxy_source_idx = [ranked_idx[1]]
+        proxy_mode = "second_nearest_fallback"
+
+    return proxy_source_idx, s_star, proxy_mode
+
+
+def _weights_for_indices(ci_tbl, idx, epsilon, p_weight, w_max):
+    est_map = {c["i"]: c["est"] for c in ci_tbl}
+    ests = np.array([est_map[i] for i in idx], dtype=float)
+    return _weight_from_D(ests, epsilon, p_weight, w_max)
 
 
 def _weight_from_D(D, eps=1e-6, p=1.0, cap=1.0):
