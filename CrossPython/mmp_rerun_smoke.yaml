@@ -25,8 +25,8 @@ result_dir: "/Users/yiming/Documents/WORK/results_mmp_rerun_smoke"
 # stieger2021  : Stieger2021, 62 subjects, 6-11 sessions each
 # ma2020       : Ma2020, 25 subjects, 15 sessions each (right hand vs right elbow)
 datasets:
-#  - bnci004
-  - stieger2021
+- bnci004
+#  - stieger2021
 #  - ma2020
 
 # ── Pipelines ────────────────────────────────────────────────────────────────
@@ -49,14 +49,14 @@ pipelines:
 # mini      : focused comparison: 2 features × 4 DA × 2 classifiers (16/pipeline, ~hours)
 # fair      : full balanced space across pipelines (~days)
 # practical : larger space with pipeline-specific pruning (~days)
-method_mode: smoke
+method_mode: mini
 
 # fixed_mmd : MMD only (faster, budget-aligned)
 # multi     : MMD + Mahalanobis (more flexible)
 dist_policy: fixed_mmd
 
-n_cores: 2
+n_cores: 10
 resume: false
 verbose: false
 
-mmp_B_boot: 10
+mmp_B_boot: 200

@@ -307,9 +307,13 @@ def _process_subject_loaded(
 
                 if seed is not None:
                     fold_seed = (seed + subj_hash*31 + pip_hash*7 + m*997 + p*31) % (2**31 - 1)
+                    # Keep MMP variants on the same bootstrap path so they share
+                    # one CI-gated near set and differ only in the combiner.
+                    mmp_selection_seed = (seed + subj_hash*31 + m*997 + p*31) % (2**31 - 1)
                     np.random.seed(fold_seed)
                 else:
                     fold_seed = None
+                    mmp_selection_seed = None
 
                 call_args = dict(
                     train_sessions=[data[j] for j in train_idx],
@@ -347,7 +351,7 @@ def _process_subject_loaded(
                     call_args["dist_type"] = row.get("dist_type") or default_dist_type
                     call_args["B_boot"] = mmp_B_boot
                     call_args["combiner"] = pipe_spec.get("combiner", "merge_then_adapt")
-                    call_args["seed"] = fold_seed
+                    call_args["seed"] = mmp_selection_seed
 
                 try:
                     t0 = time.perf_counter()
