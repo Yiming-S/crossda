@@ -70,7 +70,7 @@ map_shuffle_sessions: true
 map_seed: 1
 
 # ── MMP settings ─────────────────────────────────────────────────────────────
-mmp_B_boot: 10           # bootstrap replicates for distance CI (use 200 for production)
+mmp_B_boot: 200          # bootstrap replicates for distance CI
 
 # ── Execution ────────────────────────────────────────────────────────────────
 n_cores: 10             # subject-level parallelism (1 = sequential)

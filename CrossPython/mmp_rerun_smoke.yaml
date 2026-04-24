@@ -14,7 +14,7 @@
 # ── Paths ────────────────────────────────────────────────────────────────────
 # Ubuntu
 # data_dir: "/home/yiming/Desktop/WORK/EEG_MotorImagery"
-#result_dir: "/home/yiming/Desktop/WORK/result"
+# result_dir: "/home/yiming/Desktop/WORK/result/MMP_new"
 
 # Mac (uncomment these, comment out Ubuntu paths above)
 data_dir: "/Users/yiming/Documents/WORK/EEG_MotorImagery"
@@ -25,8 +25,8 @@ result_dir: "/Users/yiming/Documents/WORK/results_mmp_rerun_smoke"
 # stieger2021  : Stieger2021, 62 subjects, 6-11 sessions each
 # ma2020       : Ma2020, 25 subjects, 15 sessions each (right hand vs right elbow)
 datasets:
-- bnci004
-#  - stieger2021
+#  - bnci004
+  - stieger2021
 #  - ma2020
 
 # ── Pipelines ────────────────────────────────────────────────────────────────
@@ -40,13 +40,13 @@ pipelines:
 #  - MAP
 #  - DWP
   - MMP_merge_then_adapt
-  - MMP_moe
+#  - MMP_moe
 #  - BDP
 #  - BDP_bridge_to_far
 
 # ── Method bank ──────────────────────────────────────────────────────────────
 # smoke     : 1 config per pipeline, sanity test (~minutes)
-# mini      : focused comparison: 2 features × 4 DA × 2 classifiers (16/pipeline, ~hours)
+# mini      : focused comparison: 3 features × 4 DA × 2 classifiers (24/pipeline, ~hours)
 # fair      : full balanced space across pipelines (~days)
 # practical : larger space with pipeline-specific pruning (~days)
 method_mode: mini
@@ -55,8 +55,8 @@ method_mode: mini
 # multi     : MMD + Mahalanobis (more flexible)
 dist_policy: fixed_mmd
 
-n_cores: 10
-resume: false
+n_cores: 3
+resume: true
 verbose: false
 
 mmp_B_boot: 200

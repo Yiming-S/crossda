@@ -44,7 +44,7 @@ def MMP(
     epsilon: float = 1e-6,
     scale_for_distance: bool = True,
     ci_alpha: float = 0.05,
-    B_boot: int = 10,
+    B_boot: int = 200,
     k_candidates: int = 2,  # deprecated: retained for compatibility, no longer used to cap N(t)
     p_weight: float = 1.0,
     w_max: float = 1.0,
@@ -277,7 +277,7 @@ def _select_sources(
     ci_tbl = [
         {"i": i, **distance_ci(
             xs, t_pre, dist_type, dist_param,
-            B=B_boot, alpha=ci_alpha,
+            B=B_boot, alpha=ci_alpha, est_method="boot_mean",
             rng=np.random.default_rng(rng.integers(2**31) + i) if rng is not None else None,
         )}
         for i, xs in enumerate(x_pre)

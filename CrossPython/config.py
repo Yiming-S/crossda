@@ -88,7 +88,7 @@ class Config:
     map_seed: int = 1
 
     # -- MMP settings --
-    mmp_B_boot: int = 10            # bootstrap replicates for distance CI
+    mmp_B_boot: int = 200           # bootstrap replicates for distance CI
 
     # -- DWP settings --
     # DWP discards the phase-2 distance CI (only uses `est`), so bootstrap
