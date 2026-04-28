@@ -89,6 +89,10 @@ class Config:
 
     # -- MMP settings --
     mmp_B_boot: int = 200           # bootstrap replicates for distance CI
+    mmp_use_external_bdp_gate: bool = False
+    mmp_external_gate_pipeline: str = "BDP"
+    mmp_external_gate_dir: Optional[str] = None
+    mmp_bdp_compatible_final: bool = False
 
     # -- DWP settings --
     # DWP discards the phase-2 distance CI (only uses `est`), so bootstrap
@@ -136,6 +140,8 @@ _PIPELINE_ALIASES = {
     "DWP": "DWP",
     "WMAP": "DWP",
     "BDP": "BDP",
+    "BDP_FB": "BDP",
+    "BDP_FAR_TO_BRIDGE": "BDP",
     "BDP_BRIDGE_TO_FAR": "BDP_bridge_to_far",
     "BDP_BF": "BDP_bridge_to_far",
     "MMP": "MMP_merge_then_adapt",

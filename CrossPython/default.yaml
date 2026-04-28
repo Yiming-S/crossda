@@ -71,6 +71,10 @@ map_seed: 1
 
 # ── MMP settings ─────────────────────────────────────────────────────────────
 mmp_B_boot: 200          # bootstrap replicates for distance CI
+mmp_use_external_bdp_gate: false
+mmp_external_gate_pipeline: BDP
+mmp_external_gate_dir:
+mmp_bdp_compatible_final: false
 
 # ── Execution ────────────────────────────────────────────────────────────────
 n_cores: 10             # subject-level parallelism (1 = sequential)

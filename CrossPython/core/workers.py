@@ -221,6 +221,57 @@ def _load_checkpoint(path, mb):
     return mb, ckpt.get("detail_records", []), m_last + 1
 
 
+def _external_gate_detail_path(base_dir: str, dataset: str, subject_id: int, pipeline: str) -> str:
+    filename = f"{dataset}_{subject_id}_{pipeline}_detail.pkl"
+    candidates = [
+        os.path.join(base_dir, filename),
+        os.path.join(base_dir, dataset, filename),
+    ]
+    for path in candidates:
+        if os.path.exists(path):
+            return path
+    return candidates[0]
+
+
+def _load_external_bdp_gate_cache(
+    gate_dir: str,
+    dataset: str,
+    subject_id: int,
+    ref_pipeline: str = "BDP",
+) -> dict:
+    """Load saved BDP gates keyed by (method_row, pair_id)."""
+    ref_pipeline = normalize_pipeline_labels([ref_pipeline])[0]
+    detail_path = _external_gate_detail_path(gate_dir, dataset, subject_id, ref_pipeline)
+    if not os.path.exists(detail_path):
+        raise FileNotFoundError(f"External BDP gate detail not found: {detail_path}")
+
+    with open(detail_path, "rb") as f:
+        records = pickle.load(f)
+
+    cache = {}
+    for rec in records:
+        det = rec.get("detail") or {}
+        ci_table = det.get("ci_table")
+        if ci_table is None:
+            continue
+
+        key = (int(rec["method_row"]), int(rec["pair_id"]))
+        cache[key] = {
+            "ci_table": ci_table,
+            "B_final": det.get("B_final"),
+            "effective_final_idx": det.get("effective_final_idx"),
+            "best_idx": det.get("best_idx"),
+            "degraded": bool(det.get("degraded", False)),
+            "partition_mode": det.get("partition_mode"),
+            "source_pipeline": ref_pipeline,
+            "source_detail_path": detail_path,
+        }
+
+    if not cache:
+        raise RuntimeError(f"No usable external BDP gates found in {detail_path}")
+    return cache
+
+
 ###############################################################################
 # Core processing loop
 ###############################################################################
@@ -231,7 +282,9 @@ def _process_subject_loaded(
     nfolds_out=5, nfolds_in=3,
     map_score="kfold", map_k_sess=2, map_n_repeats=1,
     map_shuffle_sessions=True, map_seed=1,
-    epsilon=1e-6, default_dist_type="mmd", mmp_B_boot=10,
+    epsilon=1e-6, default_dist_type="mmd", mmp_B_boot=200,
+    mmp_use_external_bdp_gate=False, mmp_external_gate_pipeline="BDP",
+    mmp_external_gate_dir=None, mmp_bdp_compatible_final=False,
     dwp_dist_bootstrap_B=1, dwp_dist_est_method="direct",
     resume=True, verbose=True, seed=None,
     **_ignored,
@@ -282,6 +335,18 @@ def _process_subject_loaded(
         if algo_fn is None:
             logger.warning(f"Pipeline '{pipe_spec['family']}' not implemented.")
             continue
+
+        external_gate_cache = {}
+        if pipe_spec["family"] == "MMP" and mmp_use_external_bdp_gate:
+            gate_dir = mmp_external_gate_dir or result_dir
+            external_gate_cache = _load_external_bdp_gate_cache(
+                gate_dir, dataset, subject_id, mmp_external_gate_pipeline,
+            )
+            if verbose:
+                logger.info(
+                    f"[Subject {subject_id} | {this_pip}] loaded "
+                    f"{len(external_gate_cache)} external BDP gates"
+                )
 
         subj_hash = sum(ord(c) for c in str(subject_id)) % 99991
         pip_hash = sum(ord(c) for c in this_pip) % 100
@@ -352,6 +417,14 @@ def _process_subject_loaded(
                     call_args["B_boot"] = mmp_B_boot
                     call_args["combiner"] = pipe_spec.get("combiner", "merge_then_adapt")
                     call_args["seed"] = mmp_selection_seed
+                    if mmp_use_external_bdp_gate:
+                        gate_key = (m, p)
+                        if gate_key not in external_gate_cache:
+                            raise RuntimeError(
+                                f"Missing external BDP gate for method_row={m}, pair_id={p}"
+                            )
+                        call_args["external_gate"] = external_gate_cache[gate_key]
+                        call_args["bdp_compatible_final"] = mmp_bdp_compatible_final
 
                 try:
                     t0 = time.perf_counter()
@@ -456,6 +529,8 @@ def _process_subject_loaded(
                     "borrowed_abs_idx": det.get("borrowed_abs_idx"),
                     "combiner": det.get("combiner"),
                     "harmonize": det.get("harmonize"),
+                    "gate_source": det.get("gate_source"),
+                    "bdp_compatible_final": det.get("bdp_compatible_final"),
                     "score_mode": det.get("score_mode"),
                     **sr,
                 })

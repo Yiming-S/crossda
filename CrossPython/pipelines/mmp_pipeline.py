@@ -50,6 +50,8 @@ def MMP(
     w_max: float = 1.0,
     harmonize: str = "coral",
     combiner: str = "merge_then_adapt",
+    external_gate: Optional[dict] = None,
+    bdp_compatible_final: bool = False,
     verbose: bool = False,
     seed: Optional[int] = None,
     **_ignored,
@@ -83,8 +85,19 @@ def MMP(
     gate_kw = dict(dist_type=dist_type, dist_param=dist_param, scale_for_distance=scale_for_distance,
                    B_boot=B_boot, ci_alpha=ci_alpha, k_candidates=k_candidates,
                    epsilon=epsilon, p_weight=p_weight, w_max=w_max)
-    main_rng = np.random.default_rng(seed) if seed is not None else None
-    gate_main = _select_sources(X_list, X_T, **gate_kw, rng=main_rng)
+    if external_gate is None:
+        main_rng = np.random.default_rng(seed) if seed is not None else None
+        gate_main = _select_sources(X_list, X_T, **gate_kw, rng=main_rng)
+        gate_source = "mmp_bootstrap"
+    else:
+        gate_main = _select_sources_from_external_gate(
+            external_gate,
+            epsilon=epsilon,
+            p_weight=p_weight,
+            w_max=w_max,
+            uniform_weights=bdp_compatible_final,
+        )
+        gate_source = external_gate.get("source_pipeline", "external_bdp")
 
     # ── Near/nearest proxy tuning ────────────────────────────────────
     proxy_source_idx, proxy_target_idx, proxy_mode = _build_proxy_task_from_near_set(gate_main)
@@ -113,12 +126,14 @@ def MMP(
         "ranked_idx": list(gate_main["ranked_idx"]),
         "second_nearest_idx": gate_main["ranked_idx"][1] if len(gate_main["ranked_idx"]) >= 2 else None,
         "ci_table": gate_main["ci_tbl"],
+        "gate_source": gate_source,
     }
 
     # ── Final evaluation ─────────────────────────────────────────────
     Y_list = [ses["y"] for ses in train_sessions]
+    final_harmonize = "none" if bdp_compatible_final else harmonize
     X_sel = _maybe_harmonize(
-        [X_list[i] for i in gate_main["sel_idx"]], harmonize, dist_type, dist_param,
+        [X_list[i] for i in gate_main["sel_idx"]], final_harmonize, dist_type, dist_param,
     )
     Y_sel = [Y_list[i] for i in gate_main["sel_idx"]]
 
@@ -126,6 +141,7 @@ def MMP(
         X_sel, Y_sel, gate_main["weights"],
         X_T, test_ses.get("y"), da_name, da_control,
         get_classifier(clf_name, clf_params), combiner,
+        weighted_merge=not bdp_compatible_final,
     )
 
     if verbose:
@@ -144,13 +160,19 @@ def MMP(
         "weights": gate_main["weights"], "ci_table": gate_main["ci_tbl"],
         "overlap_set": gate_main["overlap_idx"], "ranked_idx": gate_main["ranked_idx"],
         "anchor": anchor_info,
-        "combiner": combiner, "harmonize": harmonize,
+        "combiner": combiner, "harmonize": final_harmonize,
+        "requested_harmonize": harmonize,
+        "gate_source": gate_source,
+        "bdp_compatible_final": bool(bdp_compatible_final),
         "cvMeanAcc": tune_acc, "scoreMode": "near_nearest_proxy",
     }
     detail = {
         "pipeline": f"MMP_{combiner}", "dist_type": dist_type,
         "score_mode": "near_nearest_proxy", "selection_mode": proxy_mode,
-        "combiner": combiner, "harmonize": harmonize,
+        "combiner": combiner, "harmonize": final_harmonize,
+        "requested_harmonize": harmonize,
+        "gate_source": gate_source,
+        "bdp_compatible_final": bool(bdp_compatible_final),
         "best_idx": gate_main["best_i"], "selected_idx": gate_main["sel_idx"],
         "overlap_set": gate_main["overlap_idx"], "ranked_idx": gate_main["ranked_idx"],
         "weights": gate_main["weights"],
@@ -176,7 +198,7 @@ def MMP(
         # distance to real target
         dist_main = {
             "dist_to_session": t_id,
-            "dist_est_method": "direct",
+            "dist_est_method": "boot_mean",
             "dist_est": ci_m.get("est"),
             "dist_lwr": ci_m.get("lwr"),
             "dist_upr": ci_m.get("upr"),
@@ -304,6 +326,51 @@ def _select_sources(
             "overlap_idx": overlap_idx, "ranked_idx": ranked_idx, "ci_tbl": ci_tbl}
 
 
+def _select_sources_from_external_gate(
+    external_gate: dict,
+    epsilon: float,
+    p_weight: float,
+    w_max: float,
+    uniform_weights: bool = False,
+) -> dict:
+    ci_tbl = list(external_gate.get("ci_table") or [])
+    if external_gate.get("degraded", False):
+        sel_idx = list(external_gate.get("effective_final_idx") or [])
+    else:
+        sel_idx = list(external_gate.get("B_final") or [])
+
+    if not sel_idx:
+        raise RuntimeError("MMP external gate: no selected final source indices.")
+
+    ok = [c for c in ci_tbl if all(np.isfinite(c[k]) for k in ("est", "lwr", "upr"))]
+    if not ok:
+        raise RuntimeError("MMP external gate: all distance CIs are non-finite.")
+
+    ok.sort(key=lambda c: c["est"])
+    ranked_idx = [int(c["i"]) for c in ok]
+    best_i = int(external_gate.get("best_idx", ranked_idx[0]))
+    sel_idx = [int(i) for i in sel_idx]
+
+    if uniform_weights:
+        weights = np.ones(len(sel_idx), dtype=float) / len(sel_idx)
+    else:
+        est_map = {int(c["i"]): c["est"] for c in ci_tbl}
+        try:
+            sel_ests = np.array([est_map[i] for i in sel_idx], dtype=float)
+        except KeyError as exc:
+            raise RuntimeError(f"MMP external gate: selected index missing from CI table: {exc}") from exc
+        weights = _weight_from_D(sel_ests, epsilon, p_weight, w_max)
+
+    return {
+        "sel_idx": sel_idx,
+        "weights": weights,
+        "best_i": best_i,
+        "overlap_idx": list(sel_idx),
+        "ranked_idx": ranked_idx,
+        "ci_tbl": ci_tbl,
+    }
+
+
 def _build_proxy_task_from_near_set(gate_main: dict) -> tuple[list[int], int, str]:
     s_star = gate_main["best_i"]
     near_idx = list(gate_main["sel_idx"])
@@ -393,10 +460,16 @@ def _coral_transform(Xs, mu_s, Sig_s, mu_t, Sig_t):
 # Combiners
 ###############################################################################
 
-def _run_combiner(X_sel, Y_sel, w_sel, X_tar, Y_tar, da_name, da_ctl, clf, combiner):
+def _run_combiner(
+    X_sel, Y_sel, w_sel, X_tar, Y_tar, da_name, da_ctl, clf, combiner,
+    weighted_merge: bool = True,
+):
     has_label = Y_tar is not None and len(Y_tar) > 0
     if combiner == "merge_then_adapt":
-        return _combiner_merge(X_sel, Y_sel, w_sel, X_tar, Y_tar, da_name, da_ctl, clf, has_label)
+        return _combiner_merge(
+            X_sel, Y_sel, w_sel, X_tar, Y_tar, da_name, da_ctl, clf, has_label,
+            weighted_merge=weighted_merge,
+        )
     return _combiner_moe(X_sel, Y_sel, w_sel, X_tar, Y_tar, da_name, da_ctl, clf, has_label)
 
 
@@ -410,9 +483,15 @@ def _merge_weighted(X_list, y_list, weights, scale=50):
     return np.vstack(X_parts), np.concatenate(y_parts)
 
 
-def _combiner_merge(X_sel, Y_sel, w_sel, X_tar, Y_tar, da_name, da_ctl, clf, has_label):
+def _combiner_merge(
+    X_sel, Y_sel, w_sel, X_tar, Y_tar, da_name, da_ctl, clf, has_label,
+    weighted_merge: bool = True,
+):
     out = {"baseline": np.nan, "acc_DA": np.nan, "model": None, "y_pred": None}
-    merged_X, merged_y = _merge_weighted(X_sel, Y_sel, w_sel)
+    if weighted_merge:
+        merged_X, merged_y = _merge_weighted(X_sel, Y_sel, w_sel)
+    else:
+        merged_X, merged_y = np.vstack(X_sel), np.concatenate(Y_sel)
 
     base_clf = clone(clf)
     base_clf.fit(merged_X, merged_y)
