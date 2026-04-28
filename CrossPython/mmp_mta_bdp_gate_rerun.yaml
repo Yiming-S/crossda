@@ -1,0 +1,64 @@
+# =============================================================================
+# Cross-session EEG classification pipeline — default configuration
+# =============================================================================
+#
+# Quick reference (uncomment/swap as needed):
+#
+#   Features:    logvar | CSP | TS
+#   Classifiers: lda | svm_linear | svm_radial | el | lr | lgbm | elm | catboost | mdm
+#   DA methods:  none | sa | tca | pt | coral
+#   Distances:   mmd | wasserstein | energy | geodesic | mahalanobis
+#
+# =============================================================================
+
+# ── Paths ────────────────────────────────────────────────────────────────────
+# Ubuntu
+data_dir: "/home/yiming/Desktop/WORK/EEG_MotorImagery"
+result_dir: "/home/yiming/Desktop/WORK/result/MMP_mta_BDP_gate_compatible"
+
+# ── Datasets ─────────────────────────────────────────────────────────────────
+# bnci004      : BNCI2014_004, 9 subjects, 5 sessions each
+# stieger2021  : Stieger2021, 62 subjects, 6-11 sessions each
+# ma2020       : Ma2020, 25 subjects, 15 sessions each (right hand vs right elbow)
+datasets:
+#  - bnci004
+  - stieger2021
+#  - ma2020
+
+# ── Pipelines ────────────────────────────────────────────────────────────────
+# MAP                  : Merge & Adapt (supervised grid search)
+# MMP_merge_then_adapt : Minimum-distance multi-source, weighted merge combiner
+# MMP_moe              : Minimum-distance multi-source, mixture-of-experts combiner
+# DWP                  : Distance-Weighted Pooling (soft-weighted full pool)
+# BDP                  : Bridge-Domain proxy tuning (far → bridge)
+# BDP_bridge_to_far    : Bridge-Domain proxy tuning (bridge → far)
+pipelines:
+#  - MAP
+#  - DWP
+  - MMP_merge_then_adapt
+#  - MMP_moe
+#  - BDP
+#  - BDP_bridge_to_far
+
+# ── Method bank ──────────────────────────────────────────────────────────────
+# smoke     : 1 config per pipeline, sanity test (~minutes)
+# mini      : focused comparison: 3 features × 4 DA × 2 classifiers (24/pipeline, ~hours)
+# fair      : full balanced space across pipelines (~days)
+# practical : larger space with pipeline-specific pruning (~days)
+method_mode: mini
+
+# fixed_mmd : MMD only (faster, budget-aligned)
+# multi     : MMD + Mahalanobis (more flexible)
+dist_policy: fixed_mmd
+
+n_cores: 12
+resume: true
+verbose: false
+
+prep_cache_dir: "/home/yiming/Desktop/WORK/result/prep_cache"
+
+mmp_B_boot: 200
+mmp_use_external_bdp_gate: true
+mmp_external_gate_pipeline: BDP
+mmp_external_gate_dir: "/home/yiming/Desktop/WORK/result"
+mmp_bdp_compatible_final: true
