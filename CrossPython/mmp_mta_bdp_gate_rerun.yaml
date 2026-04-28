@@ -61,4 +61,4 @@ mmp_B_boot: 200
 mmp_use_external_bdp_gate: true
 mmp_external_gate_pipeline: BDP
 mmp_external_gate_dir: "/home/yiming/Desktop/WORK/result/stieger2021"
-mmp_bdp_compatible_final: true
+mmp_bdp_compatible_final: false
