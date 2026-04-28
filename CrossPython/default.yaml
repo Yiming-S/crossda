@@ -79,6 +79,8 @@ mmp_bdp_compatible_final: false
 # ── Execution ────────────────────────────────────────────────────────────────
 n_cores: 10             # subject-level parallelism (1 = sequential)
 resume: true             # skip subjects with existing results
+memory_retry_attempts: 0  # retries per config/target pair for allocation-like errors
+memory_retry_sleep: 5.0   # seconds; retry wait is multiplied by retry number
 epsilon: 1.0e-6
 seed: 2025
 verbose: false           # false = suppress MNE/CSP/pyriemann logs, show only progress bars

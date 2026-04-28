@@ -51,8 +51,10 @@ method_mode: mini
 # multi     : MMD + Mahalanobis (more flexible)
 dist_policy: fixed_mmd
 
-n_cores: 12
+n_cores: 3
 resume: true
+memory_retry_attempts: 2
+memory_retry_sleep: 20.0
 verbose: false
 
 prep_cache_dir: "/home/yiming/Desktop/WORK/result/prep_cache"

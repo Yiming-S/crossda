@@ -5,6 +5,7 @@ workers.py — Subject-level worker functions for the cross-session pipeline.
 from __future__ import annotations
 
 import logging
+import gc
 import os
 import pickle
 import time
@@ -16,6 +17,58 @@ import pandas as pd
 from ..config import resolve_pipeline_spec, normalize_pipeline_labels
 
 logger = logging.getLogger(__name__)
+
+
+_MEMORY_ERROR_PATTERNS = (
+    "unable to allocate",
+    "cannot allocate memory",
+    "out of memory",
+    "memoryerror",
+    "killed",
+)
+
+
+def _is_memory_allocation_error(exc: BaseException) -> bool:
+    """Return True for allocation-like failures worth retrying."""
+    if isinstance(exc, MemoryError):
+        return True
+    msg = str(exc).lower()
+    return any(pattern in msg for pattern in _MEMORY_ERROR_PATTERNS)
+
+
+def _run_with_memory_retries(
+    fn,
+    call_args: Dict[str, Any],
+    verbose: bool,
+    max_retries: int,
+    retry_sleep: float,
+    label: str,
+):
+    """Run one pipeline pair, retrying only transient memory-allocation errors."""
+    attempts = max(1, int(max_retries) + 1)
+    retry_sleep = max(0.0, float(retry_sleep))
+    last_exc = None
+
+    for attempt in range(attempts):
+        t0 = time.perf_counter()
+        try:
+            res = fn(**call_args, verbose=verbose)
+            return res, time.perf_counter() - t0, attempt
+        except Exception as exc:
+            last_exc = exc
+            if attempt >= attempts - 1 or not _is_memory_allocation_error(exc):
+                raise
+
+            gc.collect()
+            sleep_s = retry_sleep * (attempt + 1)
+            logger.warning(
+                f"{label} memory allocation failed; retry "
+                f"{attempt + 1}/{attempts - 1} after {sleep_s:.1f}s: {exc}"
+            )
+            if sleep_s > 0:
+                time.sleep(sleep_s)
+
+    raise last_exc
 
 
 ###############################################################################
@@ -286,6 +339,7 @@ def _process_subject_loaded(
     mmp_use_external_bdp_gate=False, mmp_external_gate_pipeline="BDP",
     mmp_external_gate_dir=None, mmp_bdp_compatible_final=False,
     dwp_dist_bootstrap_B=1, dwp_dist_est_method="direct",
+    memory_retry_attempts=0, memory_retry_sleep=5.0,
     resume=True, verbose=True, seed=None,
     **_ignored,
 ):
@@ -427,9 +481,14 @@ def _process_subject_loaded(
                         call_args["bdp_compatible_final"] = mmp_bdp_compatible_final
 
                 try:
-                    t0 = time.perf_counter()
-                    res = algo_fn(**call_args, verbose=verbose)
-                    elapsed = time.perf_counter() - t0
+                    res, elapsed, retry_count = _run_with_memory_retries(
+                        algo_fn,
+                        call_args,
+                        verbose=verbose,
+                        max_retries=memory_retry_attempts,
+                        retry_sleep=memory_retry_sleep,
+                        label=f"[{subject_id}|{this_pip}|cfg{m}|pair{p}]",
+                    )
 
                     acc_vec[p] = res["acc_DA"]
                     base_vec[p] = res["baseline"]
@@ -452,6 +511,7 @@ def _process_subject_loaded(
                                       if k not in ("feature_obj", "clf_instance", "model")},
                         # New fields
                         "elapsed_sec": elapsed,
+                        "memory_retry_count": retry_count,
                         "seed_used": fold_seed,
                         "target_id": res.get("target_id"),
                         "test_label": res.get("target_label"),
@@ -522,6 +582,7 @@ def _process_subject_loaded(
                     "pair_id": rec["pair_id"],
                     "target_id": rec["target_id"],
                     "seed_used": rec.get("seed_used"),
+                    "memory_retry_count": rec.get("memory_retry_count"),
                     "dist_type": det.get("dist_type"),
                     "partition_mode": det.get("partition_mode"),
                     "proxy_direction": det.get("proxy_direction"),

@@ -104,6 +104,8 @@ def run(cfg: Config):
             mmp_bdp_compatible_final=cfg.mmp_bdp_compatible_final,
             dwp_dist_bootstrap_B=cfg.dwp_dist_bootstrap_B,
             dwp_dist_est_method=cfg.dwp_dist_est_method,
+            memory_retry_attempts=cfg.memory_retry_attempts,
+            memory_retry_sleep=cfg.memory_retry_sleep,
             resume=cfg.resume, seed=cfg.seed, verbose=True,
         )
 

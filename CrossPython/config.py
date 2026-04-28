@@ -103,6 +103,8 @@ class Config:
     # -- Execution --
     n_cores: int = 5               # subject-level parallelism (1 = sequential)
     resume: bool = True             # skip subjects with existing results
+    memory_retry_attempts: int = 0   # retries per config/target pair for allocation-like errors
+    memory_retry_sleep: float = 5.0  # seconds, multiplied by retry number
     epsilon: float = 1e-6
     seed: int = 2025
     prep_cache_dir: Optional[str] = None
