@@ -131,7 +131,9 @@ def MMP(
 
     # ── Final evaluation ─────────────────────────────────────────────
     Y_list = [ses["y"] for ses in train_sessions]
-    final_harmonize = "none" if bdp_compatible_final else harmonize
+    # Final MMP_mta uses the target-defined near set directly; do not add an
+    # extra source-to-source CORAL harmonization layer before the configured DA.
+    final_harmonize = "none"
     X_sel = _maybe_harmonize(
         [X_list[i] for i in gate_main["sel_idx"]], final_harmonize, dist_type, dist_param,
     )
@@ -141,7 +143,7 @@ def MMP(
         X_sel, Y_sel, gate_main["weights"],
         X_T, test_ses.get("y"), da_name, da_control,
         get_classifier(clf_name, clf_params), combiner,
-        weighted_merge=not bdp_compatible_final,
+        weighted_merge=False,
     )
 
     if verbose:
