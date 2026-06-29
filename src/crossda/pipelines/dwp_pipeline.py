@@ -44,7 +44,7 @@ def DWP(
     dist_type: str = "mmd",
     dist_param: Optional[dict] = None,
     score: str = "kfold",
-    k_sess: int = 2,
+    k_sess: int = 4,
     n_repeats: int = 1,
     shuffle_sessions: bool = True,
     seed: int = 1,
@@ -96,7 +96,7 @@ def DWP(
     y_T = test_session[0]["y"]
 
     # Source-to-target distances
-    dist_seed = seed if seed is not None else None
+    dist_seed = seed
     dist_info = compute_distance_ci_table(
         X_list, X_T, dist_type, dist_param,
         scale=scale_for_distance, B=dist_bootstrap_B, alpha=0.05, est_method=dist_est_method,

@@ -9,7 +9,10 @@ description = "Cross-session EEG classification and domain-adaptation pipelines 
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
-authors = [{ name = "Yiming Shen", email = "sym0574@gmail.com" }]
+authors = [
+    { name = "Yiming Shen", email = "sym0574@gmail.com" },
+    { name = "David Degras", email = "david.degras@umb.edu" },
+]
 keywords = ["EEG", "BCI", "motor-imagery", "domain-adaptation", "cross-session", "transfer-learning"]
 classifiers = [
     "Programming Language :: Python :: 3",

@@ -36,7 +36,6 @@ dist_policy: fixed_mmd     # fixed_mmd | multi
 
 # ── Cross-validation ─────────────────────────────────────────────────────────
 nfolds_out: 5
-nfolds_in: 3
 
 # ── MAP settings ─────────────────────────────────────────────────────────────
 map_score: kfold           # kfold | loso | pairwise

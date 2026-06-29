@@ -88,10 +88,11 @@ def run(cfg: Config):
         common_args = dict(
             pipelines=cfg.pipelines, result_dir=out_dir, method_bank=method_bank,
             data_dir=cfg.data_dir, cache_dir=cfg.prep_cache_dir, dataset=dataset,
-            nfolds_out=cfg.nfolds_out, nfolds_in=cfg.nfolds_in,
+            nfolds_out=cfg.nfolds_out,
             map_score=cfg.map_score, map_k_sess=cfg.map_k_sess,
             map_n_repeats=cfg.map_n_repeats, map_shuffle_sessions=cfg.map_shuffle_sessions,
-            map_seed=cfg.map_seed, epsilon=cfg.epsilon, default_dist_type="mmd",
+            map_seed=cfg.map_seed, epsilon=cfg.epsilon,
+            default_dist_type=cfg.default_dist_type,
             mmp_B_boot=cfg.mmp_B_boot,
             mmp_use_external_bdp_gate=cfg.mmp_use_external_bdp_gate,
             mmp_external_gate_pipeline=cfg.mmp_external_gate_pipeline,
@@ -186,7 +187,7 @@ def main():
     if args.n_cores is not None:
         data["n_cores"] = args.n_cores
 
-    cfg = Config(**data)
+    cfg = Config.from_dict(data)
 
     run(cfg)
 

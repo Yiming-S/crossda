@@ -13,9 +13,9 @@ pipeline families behind one CLI and a small Python API:
 | `MMP` | Minimum-distance Multi-source — CI-gated source selection (`merge_then_adapt` / `moe` combiners) |
 | `BDP` | Bridge-Domain Proxy — proxy-tuning between a bridge set and a far set |
 
-Features (`logvar` / `CSP` / `TS`), classifiers (`lda`, `svm_*`, `lr`, `el`, `lgbm`,
-`catboost`, `mdm`, …) and domain-adaptation methods (`none`, `sa`, `tca`, `pt`, `coral`)
-are all configurable via a method bank.
+Features (`logvar` / `CSP` / `TS`), classifiers (`lda`, `svm_linear`, `svm_radial`, `lr`,
+`el`, `elm`, `lgbm`, `catboost`, `mdm`) and domain-adaptation methods (`none`, `sa`, `tca`,
+`pt`, `coral`) are all configurable via a method bank.
 
 ## Installation
 
@@ -38,6 +38,7 @@ git repository (it is not yet on PyPI).
 ```bash
 crossda --help
 crossda --mode smoke --datasets bnci004 --data-dir /path/to/EEG --result-dir ./out
+crossda --pipelines MAP DWP --n-cores 4
 crossda --config configs/examples/mmp_smoke.yaml
 ```
 
@@ -66,8 +67,11 @@ from crossda import MAP, DWP, MMP, BDP, generate_method_bank, process_subject
 
 ## Datasets
 
-`crossda` reads three motor-imagery datasets. `bnci004` and `stieger2021` are fetched via
-[MOABB](https://moabb.neurotechx.com/); `ma2020` is read from local `.cnt` files.
+`crossda` reads three motor-imagery datasets. `bnci004` is fetched automatically via
+[MOABB](https://moabb.neurotechx.com/). `stieger2021` also uses the MOABB loader but
+additionally needs the raw `.mat` files locally under `<data_dir>/MNE-Stieger2021-data/`
+(used for subject discovery). `ma2020` is read from local `.cnt` files under
+`<data_dir>/MNE-ma2020-data/`.
 
 | Key | Dataset | Sessions |
 |-----|---------|----------|
@@ -83,8 +87,9 @@ bridge / far, their weights and distances) to `result_dir`.
 
 ## Configuration
 
-See [`src/crossda/default.yaml`](src/crossda/default.yaml) for the full set of options
-(method bank mode, CV folds, MAP scoring mode, MMP bootstrap settings, parallelism, …).
+See [`src/crossda/default.yaml`](src/crossda/default.yaml) for the commonly-used options
+(method bank mode, CV folds, MAP scoring mode, MMP bootstrap settings, parallelism, …); the
+complete set of configurable fields is defined in [`config.py`](src/crossda/config.py).
 
 ## Citation
 
@@ -92,4 +97,4 @@ If you use `crossda` in academic work, please cite the associated paper (BibTeX 
 
 ## License
 
-[MIT](LICENSE) © Yiming Shen
+[MIT](LICENSE) © Yiming Shen and David Degras

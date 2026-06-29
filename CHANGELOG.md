@@ -5,6 +5,33 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed (review batch)
+- **Checkpoint resume is now identity-checked.** `_load_checkpoint` used a
+  positional row merge, so if the method bank changed between runs the cached
+  accuracies could graft onto the wrong (feature, da, classifier) rows. It now
+  verifies the cached rows still match by identity and discards a stale cache
+  (recomputing) instead of grafting.
+- **`process_subject` no longer silently swallows unknown keyword arguments.** The
+  `**_ignored` catch-all on the per-subject driver was removed, so a misspelled
+  control parameter (`nfolds_outer=10`, a typo'd `score`) now raises `TypeError`
+  instead of being dropped and running with defaults. `Config.from_dict` likewise
+  rejects unknown YAML keys with a clear `ValueError`.
+
+### Changed (review batch, behavior-preserving)
+- Hoisted the fold-invariant domain adaptation out of `map_cv`'s outer-fold loop
+  (~5× fewer DA computations in the hottest scoring primitive; numerically identical).
+- Removed the dead inner-fold machinery from `cross_cv` and the inert `nfolds_in`
+  knob end-to-end (config, default.yaml, worker signature).
+- `_weight_from_D` now copies its input instead of mutating it in place;
+  `_normalize_score_mode`'s error message is no longer MAP-specific; dropped MAP's
+  unused `epsilon` parameter; aligned the direct-API `MAP`/`DWP` `k_sess` default to
+  4 (matching the CLI/Config default). Golden smoke/broad digests are unchanged.
+
+### Added (review batch)
+- `default_dist_type` Config field (validated against the five distance names) so
+  the multi-distance support is reachable from config instead of a hardcoded literal.
+- Tests for the loso/pairwise scorers, config validation, and the unknown-kwarg guard.
+
 ### Added
 - **Installable package.** `pyproject.toml` (setuptools, src layout), a `crossda`
   console entry point (`crossda` / `python -m crossda`), a top-level public API

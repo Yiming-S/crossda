@@ -37,7 +37,7 @@ def _normalize_score_mode(score: str) -> str:
         "leave_one_session_out": "loso", "innercv": "loso", "inner_cv": "loso", "loso": "loso",
     }
     if s not in aliases:
-        raise ValueError(f"MAP: `score` must be one of: 'loso', 'pairwise', 'kfold'. Got {s!r}")
+        raise ValueError(f"`score` must be one of: 'loso', 'pairwise', 'kfold'. Got {s!r}")
     return aliases[s]
 
 

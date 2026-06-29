@@ -276,10 +276,25 @@ def _load_checkpoint(path, mb):
         return mb, [], 0
     if not isinstance(ckpt, dict) or "m_last" not in ckpt:
         return mb, [], 0
-    m_last = min(ckpt["m_last"], len(mb) - 1)
     partial = ckpt.get("mb_partial")
-    if partial is not None and len(partial) <= len(mb):
-        mb.iloc[:len(partial)] = partial.iloc[:len(partial)]
+    if partial is None or len(partial) > len(mb):
+        return mb, [], 0
+
+    # Only resume if the cached rows still match the current method bank by
+    # identity. Otherwise the positional graft would attach cached accuracies to
+    # the wrong (feature, da, classifier) rows — so discard the stale cache and
+    # recompute from scratch instead.
+    key_cols = [c for c in ("pipeline", "feature", "classifier", "da", "dist_type")
+                if c in mb.columns and c in partial.columns]
+    n = len(partial)
+    aligned = bool(key_cols) and mb[key_cols].iloc[:n].reset_index(drop=True).equals(
+        partial[key_cols].reset_index(drop=True))
+    if not aligned:
+        logger.warning("  [ckpt] Method bank changed since checkpoint; ignoring stale cache.")
+        return mb, [], 0
+
+    m_last = min(ckpt["m_last"], len(mb) - 1)
+    mb.iloc[:n] = partial.iloc[:n]
     logger.info(f"  [ckpt] Resuming from config {m_last + 1}/{len(mb)}")
     return mb, ckpt.get("detail_records", []), m_last + 1
 
@@ -342,7 +357,7 @@ def _load_external_bdp_gate_cache(
 def _process_subject_loaded(
     subject_id, data, session_ids, pipelines, result_dir, method_bank, pairs_idx,
     outer_eval_label, dataset,
-    nfolds_out=5, nfolds_in=3,
+    nfolds_out=5,
     map_score="kfold", map_k_sess=2, map_n_repeats=1,
     map_shuffle_sessions=True, map_seed=1,
     epsilon=1e-6, default_dist_type="mmd", mmp_B_boot=200,
@@ -351,7 +366,6 @@ def _process_subject_loaded(
     dwp_dist_bootstrap_B=1, dwp_dist_est_method="direct",
     memory_retry_attempts=0, memory_retry_sleep=5.0,
     resume=True, verbose=True, seed=None,
-    **_ignored,
 ):
     pipelines = normalize_pipeline_labels(pipelines)
     n_sess = len(data)

@@ -33,12 +33,11 @@ def MAP(
     classifier: Optional[str] = None,
     da: Optional[str] = None,
     score: str = "kfold",
-    k_sess: int = 2,
+    k_sess: int = 4,
     n_repeats: int = 1,
     shuffle_sessions: bool = True,
     seed: int = 1,
     nfolds_out: int = 5,
-    epsilon: float = 1e-6,
     verbose: bool = False,
     **_ignored,
 ) -> Dict[str, Any]:

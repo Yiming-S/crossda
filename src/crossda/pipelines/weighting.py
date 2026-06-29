@@ -19,7 +19,7 @@ def _weights_for_indices(ci_tbl, idx, epsilon, p_weight, w_max):
 
 
 def _weight_from_D(D, eps=1e-6, p=1.0, cap=1.0):
-    D = np.asarray(D, dtype=float)
+    D = np.array(D, dtype=float)  # copy — never mutate the caller's array in place
     D[~np.isfinite(D)] = np.nanmax(D[np.isfinite(D)]) if np.any(np.isfinite(D)) else 1.0
     w = (D + eps) ** (-p)
     w /= w.sum()

@@ -18,7 +18,7 @@ Quick reference (see default.yaml for full documentation):
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from pathlib import Path
 from typing import List, Optional
 
@@ -34,6 +34,7 @@ VALID_DATASETS = ("bnci004", "stieger2021", "ma2020")
 VALID_MODES = ("smoke", "mini", "svm_radial_add", "fair", "practical")
 VALID_DIST_POLICIES = ("fixed_mmd", "multi")
 VALID_MAP_SCORES = ("kfold", "loso", "pairwise")
+VALID_DIST_TYPES = ("mmd", "wasserstein", "energy", "geodesic", "mahalanobis")
 
 
 # ── Configuration dataclass ────────────────────────────────────────────────
@@ -73,9 +74,12 @@ class Config:
     # multi     : MMD + Mahalanobis
     dist_policy: str = "fixed_mmd"
 
+    # Distance used by the geometric pipelines (MMP/BDP) when a method-bank row
+    # leaves dist_type unset. One of VALID_DIST_TYPES.
+    default_dist_type: str = "mmd"
+
     # -- Cross-validation --
     nfolds_out: int = 5
-    nfolds_in: int = 3
 
     # -- MAP settings --
     # kfold    : session-level k-fold (feature fitted per fold, strictest)
@@ -117,14 +121,14 @@ class Config:
             raise ValueError(f"dist_policy must be one of {VALID_DIST_POLICIES}")
         if self.map_score not in VALID_MAP_SCORES:
             raise ValueError(f"map_score must be one of {VALID_MAP_SCORES}")
+        if self.default_dist_type not in VALID_DIST_TYPES:
+            raise ValueError(f"default_dist_type must be one of {VALID_DIST_TYPES}")
         for ds in self.datasets:
             if ds not in VALID_DATASETS:
                 raise ValueError(f"Unknown dataset: {ds!r}. Valid: {VALID_DATASETS}")
         self.pipelines = normalize_pipeline_labels(self.pipelines)
         if self.nfolds_out < 2:
             raise ValueError("nfolds_out must be >= 2")
-        if self.nfolds_in < 2:
-            raise ValueError("nfolds_in must be >= 2")
         if self.prep_cache_dir is None:
             self.prep_cache_dir = os.path.join(self.result_dir, "prep_cache")
 
@@ -132,7 +136,24 @@ class Config:
     def from_yaml(cls, path: str | Path) -> "Config":
         with open(path) as f:
             data = yaml.safe_load(f) or {}
+        return cls.from_dict(data)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "Config":
+        """Build a Config from a mapping, rejecting unknown keys with a clear error."""
+        check_unknown_keys(data)
         return cls(**data)
+
+
+def check_unknown_keys(data: dict) -> None:
+    """Raise ValueError if ``data`` has keys that are not Config fields (e.g. a typo)."""
+    known = {f.name for f in fields(Config)}
+    unknown = [k for k in data if k not in known]
+    if unknown:
+        raise ValueError(
+            f"Unknown config key(s): {sorted(unknown)}. "
+            f"Valid keys: {sorted(known)}"
+        )
 
 
 # ── Pipeline label helpers ─────────────────────────────────────────────────
