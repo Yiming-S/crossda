@@ -1,0 +1,56 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "crossda"
+version = "0.1.0"
+description = "Cross-session EEG classification and domain-adaptation pipelines (MAP / DWP / MMP / BDP)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Yiming Shen", email = "sym0574@gmail.com" }]
+keywords = ["EEG", "BCI", "motor-imagery", "domain-adaptation", "cross-session", "transfer-learning"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering",
+]
+
+dependencies = [
+    "numpy",
+    "pandas",
+    "scikit-learn",
+    "mne",
+    "moabb",
+    "pyriemann",
+    "pyyaml",
+    "tqdm",
+    # Domain-adaptation backend (required by every pipeline). Not on PyPI yet, so
+    # it is pulled from its git repository; pip resolves this automatically.
+    "da4bci @ git+https://github.com/Yiming-S/DA4BCI-Python.git",
+]
+
+[project.optional-dependencies]
+# Optional gradient-boosting classifiers (the 'lgbm' / 'catboost' method-bank entries).
+boost = ["lightgbm", "catboost"]
+# Development / testing.
+dev = ["pytest", "pytest-cov", "pyflakes", "build"]
+
+[project.scripts]
+crossda = "crossda.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/Yiming-S/CrossPython"
+Repository = "https://github.com/Yiming-S/CrossPython"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+crossda = ["default.yaml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

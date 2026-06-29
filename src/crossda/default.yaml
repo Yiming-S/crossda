@@ -1,0 +1,62 @@
+# =============================================================================
+# crossda — default configuration (shipped with the package)
+# =============================================================================
+# Copy this file, set data_dir / result_dir, and run:
+#     crossda --config my_config.yaml
+# or override on the command line:
+#     crossda --data-dir /path/to/EEG --result-dir ./out --mode smoke
+#
+#   Features:    logvar | CSP | TS
+#   Classifiers: lda | svm_linear | svm_radial | el | lr | lgbm | elm | catboost | mdm
+#   DA methods:  none | sa | tca | pt | coral
+#   Distances:   mmd | wasserstein | energy | geodesic | mahalanobis
+# =============================================================================
+
+# ── Paths (set these for your machine; left blank in the shipped default) ─────
+data_dir: ""              # EEG data root (required to run on real data)
+result_dir: "./results"   # where summary / detail / role outputs are written
+
+# ── Datasets: bnci004 | stieger2021 | ma2020 ─────────────────────────────────
+datasets:
+  - bnci004
+
+# ── Pipelines ────────────────────────────────────────────────────────────────
+# MAP | DWP | MMP_merge_then_adapt | MMP_moe | BDP | BDP_bridge_to_far
+pipelines:
+  - MAP
+  - DWP
+  - MMP_merge_then_adapt
+  - MMP_moe
+  - BDP
+  - BDP_bridge_to_far
+
+# ── Method bank: smoke | mini | svm_radial_add | fair | practical ────────────
+method_mode: mini
+dist_policy: fixed_mmd     # fixed_mmd | multi
+
+# ── Cross-validation ─────────────────────────────────────────────────────────
+nfolds_out: 5
+nfolds_in: 3
+
+# ── MAP settings ─────────────────────────────────────────────────────────────
+map_score: kfold           # kfold | loso | pairwise
+map_k_sess: 4
+map_n_repeats: 1
+map_shuffle_sessions: true
+map_seed: 1
+
+# ── MMP settings ─────────────────────────────────────────────────────────────
+mmp_B_boot: 200
+mmp_use_external_bdp_gate: false
+mmp_external_gate_pipeline: BDP
+mmp_external_gate_dir:
+mmp_bdp_compatible_final: false
+
+# ── Execution ────────────────────────────────────────────────────────────────
+n_cores: 1                 # subject-level parallelism (1 = sequential)
+resume: true
+memory_retry_attempts: 0
+memory_retry_sleep: 5.0
+epsilon: 1.0e-6
+seed: 2025
+verbose: false

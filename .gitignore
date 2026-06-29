@@ -1,0 +1,39 @@
+# ── Python ───────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+*.egg
+
+# ── Virtual environments ─────────────────────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+
+# ── Tooling caches ───────────────────────────────────────────────────────────
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+.coverage
+htmlcov/
+
+# ── OS / editor cruft ────────────────────────────────────────────────────────
+.DS_Store
+*.swp
+*~
+
+# ── Project outputs / local data (never commit experiment artifacts) ─────────
+results/
+results_*/
+prep_cache/
+*.pkl
+*_roles.csv
+
+# ── Local machine config overrides (real data paths live here, not in git) ───
+*.local.yaml
+config.local.yaml
