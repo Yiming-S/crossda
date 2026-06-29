@@ -294,7 +294,11 @@ def _load_checkpoint(path, mb):
         return mb, [], 0
 
     m_last = min(ckpt["m_last"], len(mb) - 1)
-    mb.iloc[:n] = partial.iloc[:n]
+    # Copy cached values by COLUMN LABEL (only columns present in both), never by
+    # position — a positional graft would crash on a different column count and
+    # silently swap values if the column order changed.
+    common = [c for c in partial.columns if c in mb.columns]
+    mb.loc[mb.index[:n], common] = partial[common].iloc[:n].to_numpy()
     logger.info(f"  [ckpt] Resuming from config {m_last + 1}/{len(mb)}")
     return mb, ckpt.get("detail_records", []), m_last + 1
 

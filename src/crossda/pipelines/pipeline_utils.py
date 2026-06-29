@@ -88,6 +88,11 @@ def distance_ci(
     lwr = float(np.quantile(finite, alpha / 2))
     upr = float(np.quantile(finite, 1 - alpha / 2))
     est = float(np.mean(finite)) if est_method == "boot_mean" else d_hat
+    # The direct point estimate can fail (d_hat=inf) even when the bootstrap
+    # resamples are finite; fall back to the bootstrap mean so the reported
+    # estimate is never inf while its own CI is finite.
+    if not np.isfinite(est):
+        est = float(np.mean(finite))
     return dict(est=est, lwr=lwr, upr=upr)
 
 

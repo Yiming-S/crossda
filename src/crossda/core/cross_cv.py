@@ -22,7 +22,12 @@ def _outer_folds(y: NDArray, nfolds_out: int = 5, random_state: int = 42) -> Lis
     of every (feature, DA, classifier) candidate is reproducible by design.
     """
     y = np.asarray(y)
-    skf = StratifiedKFold(n_splits=nfolds_out, shuffle=True, random_state=random_state)
+    # StratifiedKFold needs at least n_splits members in every class; clamp the
+    # fold count to the smallest class so a small session is scored (with fewer
+    # folds) instead of raising an opaque error.
+    min_class = int(np.min(np.unique(y, return_counts=True)[1]))
+    k = max(2, min(nfolds_out, min_class))
+    skf = StratifiedKFold(n_splits=k, shuffle=True, random_state=random_state)
     return [test_idx for _, test_idx in skf.split(np.zeros(len(y)), y)]
 
 

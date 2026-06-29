@@ -5,12 +5,34 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed (bug hunt)
+- **Checkpoint resume now merges by column label.** The identity-checked merge
+  still used a positional `iloc` graft, which crashed (`IndexError`) when the
+  cached method bank had a different column count and silently swapped values
+  (e.g. cvMeanAcc ↔ baseline) when the column order differed. It now copies the
+  cached values by column name.
+- **MMP `moe` combiner no longer crashes on a single-class source.** Such a source
+  votes for its only class instead of crashing the whole run in `predict`.
+- **`distance_ci` never reports `est=inf` inside a finite CI.** When the direct
+  full-data estimate fails but the bootstrap resamples are finite, the estimate
+  falls back to the bootstrap mean (previously a finite-CI source could be ranked
+  as the worst).
+- **Small sessions no longer fail with an opaque error.** `_outer_folds` clamps
+  the CV fold count to the smallest class instead of raising when a session has
+  fewer members per class than `nfolds_out`.
+- **Scalar-string config values are accepted.** `pipelines: MAP` / `datasets: ma2020`
+  written as a YAML scalar are wrapped in a list instead of being iterated
+  character-by-character.
+- **Parallelism is no longer permanently downgraded.** A parallel-execution
+  failure on one dataset used to mutate `cfg.n_cores=1`, forcing every later
+  dataset to run sequentially; the fallback is now per-dataset.
+- Note: fixing the da4bci CORAL bug changes the results of any `coral`-DA
+  configuration (the previous CORAL output was mathematically wrong).
+
 ### Fixed (review batch)
-- **Checkpoint resume is now identity-checked.** `_load_checkpoint` used a
-  positional row merge, so if the method bank changed between runs the cached
-  accuracies could graft onto the wrong (feature, da, classifier) rows. It now
-  verifies the cached rows still match by identity and discards a stale cache
-  (recomputing) instead of grafting.
+- **Checkpoint resume is now identity-checked.** `_load_checkpoint` verifies the
+  cached rows still match the current method bank by identity and discards a stale
+  cache (recomputing) instead of grafting.
 - **`process_subject` no longer silently swallows unknown keyword arguments.** The
   `**_ignored` catch-all on the per-subject driver was removed, so a misspelled
   control parameter (`nfolds_outer=10`, a typo'd `score`) now raises `TypeError`

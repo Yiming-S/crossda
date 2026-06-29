@@ -115,6 +115,12 @@ class Config:
     verbose: bool = False           # True = full logs; False = progress bars only
 
     def __post_init__(self):
+        # Accept a single value written as a YAML scalar (datasets: ma2020) by
+        # wrapping it in a list, so it isn't iterated character-by-character.
+        if isinstance(self.datasets, str):
+            self.datasets = [self.datasets]
+        if isinstance(self.pipelines, str):
+            self.pipelines = [self.pipelines]
         if self.method_mode not in VALID_MODES:
             raise ValueError(f"method_mode must be one of {VALID_MODES}")
         if self.dist_policy not in VALID_DIST_POLICIES:

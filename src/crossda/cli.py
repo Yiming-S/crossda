@@ -107,13 +107,16 @@ def run(cfg: Config):
 
         np.random.seed(cfg.seed)
         n_ok, n_fail, failures = 0, 0, []
+        # Local per-dataset core count: a parallel-execution fallback must not
+        # permanently downgrade later datasets to sequential.
+        n_cores = cfg.n_cores
 
-        if cfg.n_cores > 1:
+        if n_cores > 1:
             import multiprocessing as mp
             ctx = mp.get_context("spawn")
             from concurrent.futures import ProcessPoolExecutor
             try:
-                with ProcessPoolExecutor(max_workers=cfg.n_cores, mp_context=ctx) as pool:
+                with ProcessPoolExecutor(max_workers=n_cores, mp_context=ctx) as pool:
                     futures = {pool.submit(process_subject, subject_id=sid, **common_args): sid
                                for sid in subjects}
                     for fut in futures:
@@ -130,9 +133,9 @@ def run(cfg: Config):
                             failures.append(str(sid))
             except Exception as e:
                 logger.warning(f"Parallel execution failed ({e}), falling back to sequential.")
-                cfg.n_cores = 1
+                n_cores = 1
 
-        if cfg.n_cores <= 1:
+        if n_cores <= 1:
             from tqdm import tqdm
             for sid in tqdm(subjects, desc=f"{dataset} subjects", unit="sub"):
                 try:

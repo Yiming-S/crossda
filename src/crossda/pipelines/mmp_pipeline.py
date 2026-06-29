@@ -485,6 +485,16 @@ def _combiner_moe(X_sel, Y_sel, w_sel, X_tar, Y_tar, da_name, da_ctl, clf, has_l
 
     for Xi, yi in zip(X_sel, Y_sel):
         yi = np.asarray(yi)
+        if len(np.unique(yi)) < 2:
+            # A single-class source cannot train a discriminative classifier
+            # (sklearn would crash on predict). It votes for its only class;
+            # keep the per-source preds aligned with the MoE weights.
+            const = np.full(X_tar.shape[0], yi[0])
+            models.append(None)
+            if has_label:
+                preds_base.append(const)
+                preds_da.append(const)
+            continue
         base_mod = clone(clf)
         base_mod.fit(Xi, yi)
         models.append(base_mod)
