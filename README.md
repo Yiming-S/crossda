@@ -20,8 +20,8 @@ Features (`logvar` / `CSP` / `TS`), classifiers (`lda`, `svm_linear`, `svm_radia
 ## Installation
 
 ```bash
-git clone https://github.com/Yiming-S/CrossPython.git
-cd CrossPython
+git clone https://github.com/Yiming-S/CrossDA.git
+cd CrossDA
 pip install -e .            # core install — also pulls the da4bci backend from git
 pip install -e ".[boost]"   # + lightgbm / catboost classifiers
 pip install -e ".[dev]"     # + test tooling

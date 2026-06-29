@@ -46,8 +46,8 @@ dev = ["pytest", "pytest-cov", "pyflakes", "build"]
 crossda = "crossda.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/Yiming-S/CrossPython"
-Repository = "https://github.com/Yiming-S/CrossPython"
+Homepage = "https://github.com/Yiming-S/CrossDA"
+Repository = "https://github.com/Yiming-S/CrossDA"
 
 [tool.setuptools.packages.find]
 where = ["src"]
