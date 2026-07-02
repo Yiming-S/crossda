@@ -1,5 +1,9 @@
 # crossda
 
+<p align="center">
+  <img src="docs/cover.svg" alt="CrossDA cover: multi-source sessions feed cross-session domain adaptation pipelines" width="100%">
+</p>
+
 Cross-session EEG classification and domain-adaptation pipelines for motor-imagery BCI.
 
 `crossda` evaluates several strategies for transferring a classifier across recording
