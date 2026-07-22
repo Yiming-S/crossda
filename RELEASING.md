@@ -24,7 +24,7 @@ da4bci @ git+https://github.com/Yiming-S/DA4BCI-Python.git
 
 1. The first upload claims the project name `crossda` on PyPI.
 2. On PyPI → **Publishing** → add a Trusted Publisher:
-   - Owner: `Yiming-S`, Repository: `CrossDA`
+   - Owner: `Yiming-S`, Repository: `crossda`
    - Workflow: `release.yml`
    - Environment: `pypi`
 3. In the GitHub repo → **Settings → Environments** → create an environment named
