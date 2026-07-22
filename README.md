@@ -1,5 +1,9 @@
 # crossda
 
+<p align="center">
+  <img src="docs/cover.svg" alt="CrossDA cover: multi-source sessions feed cross-session domain adaptation pipelines" width="100%">
+</p>
+
 Cross-session EEG classification and domain-adaptation pipelines for motor-imagery BCI.
 
 `crossda` evaluates several strategies for transferring a classifier across recording
@@ -20,8 +24,8 @@ Features (`logvar` / `CSP` / `TS`), classifiers (`lda`, `svm_linear`, `svm_radia
 ## Installation
 
 ```bash
-git clone https://github.com/Yiming-S/CrossPython.git
-cd CrossPython
+git clone https://github.com/Yiming-S/crossda.git
+cd crossda
 pip install -e .            # core install — also pulls the da4bci backend from git
 pip install -e ".[boost]"   # + lightgbm / catboost classifiers
 pip install -e ".[dev]"     # + test tooling

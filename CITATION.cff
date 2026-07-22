@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata below."
+type: software
+title: "CrossDA"
+abstract: "Cross-session transfer pipelines (MAP, DWP, MMP, BDP) for motor-imagery EEG classifier adaptation, with a configurable experiment runner."
+authors:
+  - family-names: "Shen"
+    given-names: "Yiming"
+    email: "yiming.shen001@umb.edu"
+    orcid: "https://orcid.org/0009-0004-6282-3755"
+  - family-names: "Degras"
+    given-names: "David"
+    email: "david.degras@umb.edu"
+    orcid: "https://orcid.org/0000-0002-7221-584X"
+version: "0.1.0"
+repository-code: "https://github.com/Yiming-S/CrossDA"
+url: "https://github.com/Yiming-S/CrossDA"
+license: MIT
+keywords:
+  - EEG
+  - brain-computer interface
+  - domain adaptation
+  - cross-session
+  - benchmark
+  - Python
